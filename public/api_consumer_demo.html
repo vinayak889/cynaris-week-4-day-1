@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laravel API Consumer Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
+        <h1 class="text-2xl font-bold mb-4">Laravel REST API Consumer (Axios Demo)</h1>
+        
+        <div id="status" class="mb-4 p-3 bg-blue-50 text-blue-700 rounded text-sm">Loading items from API...</div>
+
+        <ul id="item-list" class="space-y-2 mb-6">
+            <!-- Dynamic items populated via JS -->
+        </ul>
+
+        <div class="border-t pt-4">
+            <h2 class="text-lg font-semibold mb-2">Create New Item</h2>
+            <form id="create-form" class="space-y-3">
+                <input type="text" id="title" placeholder="Item Title" required class="w-full p-2 border rounded">
+                <textarea id="description" placeholder="Item Description" required class="w-full p-2 border rounded"></textarea>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Submit via Axios POST</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = '/api/items';
+        const TOKEN = 'YOUR_SANCTUM_TOKEN_HERE'; // Replace with actual token from Sanctum auth
+
+        const axiosInstance = axios.create({
+            baseURL: API_BASE_URL,
+            headers: {
+                'Authorization': `Bearer ${TOKEN}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        async function fetchItems() {
+            try {
+                const response = await axiosInstance.get('/');
+                const items = response.data.data;
+                const listEl = document.getElementById('item-list');
+                listEl.innerHTML = '';
+                
+                items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'p-3 bg-gray-50 border rounded flex justify-between items-center';
+                    li.innerHTML = `<span><strong>${item.title}</strong>: ${item.description}</span>
+                                    <button onclick="deleteItem(${item.id})" class="text-red-600 text-sm">Delete</button>`;
+                    listEl.appendChild(li);
+                });
+                document.getElementById('status').innerText = 'Items loaded successfully!';
+            } catch (error) {
+                document.getElementById('status').innerText = 'Error loading items: ' + error.message;
+                document.getElementById('status').className = 'mb-4 p-3 bg-red-50 text-red-700 rounded text-sm';
+            }
+        }
+
+        document.getElementById('create-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+
+            try {
+                await axiosInstance.post('/', { title, description, is_active: true });
+                document.getElementById('title').value = '';
+                document.getElementById('description').value = '';
+                fetchItems();
+            } catch (error) {
+                alert('Error creating item: ' + error.response?.data?.message || error.message);
+            }
+        });
+
+        async function deleteItem(id) {
+            if(!confirm('Are you sure?')) return;
+            try {
+                await axiosInstance.delete(`/${id}`);
+                fetchItems();
+            } catch (error) {
+                alert('Error deleting item');
+            }
+        }
+
+        // Initialize fetch on load
+        fetchItems();
+    </script>
+</body>
+</html>
